@@ -5,35 +5,57 @@ name: Python application
 
 on:
   push:
-    branches: [ "dev" ]
+    branches:
+      - '**'
   pull_request:
-    branches: [ "dev" ]
+    branches: [ "dev", "main" ]
 
 permissions:
   contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.10
+    - name: Set up Python 3.12
       uses: actions/setup-python@v3
       with:
-        python-version: "3.10"
+        python-version: "3.12"
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt;
+        elif [ -f requirements.in ]; then
+          pip install -r requirements.in;
+        else
+          echo "No requirement found!"
+        fi
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
+
+  export-dags:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
+    - name: Update Airflow dags
       run: |
-        pytest
+        echo Loading dags in airflow
+        gcloud compute scp --zone=${{ vars.GCP_ZONE }} --recurse \
+        ./airflow/dags/* \
+          ${{ vars.GCP_SCP_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags
+
