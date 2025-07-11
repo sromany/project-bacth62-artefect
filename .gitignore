@@ -213,3 +213,5 @@ __marimo__/
 
 # Airflow
 .airflow
+logs/
+data/
