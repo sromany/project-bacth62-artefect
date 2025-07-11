@@ -209,3 +209,6 @@ __marimo__/
 
 # Pyenv setup
 .python-version
+
+logs/
+data/
