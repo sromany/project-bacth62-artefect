@@ -7,8 +7,10 @@ from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-# Ajouter le dossier 'scripts' au PYTHONPATH
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts")))
+# Ajoute le dossier "src" au PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src")))
+
+from project_bacth62_artefect.fetch_open_meteo import run_temperature_extraction
 
 from fetch_open_meteo import run_temperature_extraction  # Assure-toi que le fichier s'appelle bien fetch_open_meteo.py
 
