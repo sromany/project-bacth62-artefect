@@ -53,7 +53,7 @@ def fetch_weather(commune, year):
         "longitude": commune["lon"],
         "start_date": f"{year}-01-01",
         "end_date": f"{year}-12-31",
-        "daily": "temperature_2m_max,sunshine_duration",
+        "daily": "temperature_2m_mean,sunshine_duration",
         "timezone": TIMEZONE
     }
     r = requests.get(API_URL, params=params, timeout=60)
