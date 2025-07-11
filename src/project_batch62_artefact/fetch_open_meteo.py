@@ -1,15 +1,14 @@
 import requests
 import pandas as pd
-import sys
 import os
 import time
 from collections import defaultdict
 
 API_URL = "https://historical-forecast-api.open-meteo.com/v1/forecast"
 TIMEZONE = "Europe/Paris"
-OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-SLEEP_BETWEEN_CALLS = 3  # seconds
-MAX_RETRIES = 3  # nombre maximum de tentatives pour un département
+OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+SLEEP_BETWEEN_CALLS = 3
+MAX_RETRIES = 3
 
 def get_prefectures():
     response = requests.get("https://geo.api.gouv.fr/departements")
@@ -60,10 +59,10 @@ def fetch_weather(commune, year):
     r.raise_for_status()
     return r.json()
 
-def process_weather(commune, response):
+def process_weather(commune, response, year):
     df = pd.DataFrame({
         "date": pd.to_datetime(response["daily"]["time"]),
-        "temperature": response["daily"]["temperature_2m_max"],
+        "temperature": response["daily"]["temperature_2m_mean"],
         "ensoleillement": response["daily"]["sunshine_duration"]
     })
     df["mois"] = df["date"].dt.month
@@ -74,7 +73,13 @@ def process_weather(commune, response):
     }).round(2).reset_index()
 
     result["departement"] = commune["departement"]
-    return result[["mois", "departement", "temperature", "ensoleillement"]]
+    result["date"] = pd.to_datetime({
+        "year": year,
+        "month": result["mois"],
+        "day": 1
+    })
+
+    return result[["date", "departement", "temperature", "ensoleillement"]]
 
 def run_temperature_extraction(year):
     year = int(year)
@@ -89,15 +94,11 @@ def run_temperature_extraction(year):
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 response = fetch_weather(commune, year)
-                result = process_weather(commune, response)
+                result = process_weather(commune, response, year)
                 for _, row in result.iterrows():
-                    all_months[int(row["mois"])].append({
-                        "departement": row["departement"],
-                        "temperature": row["temperature"],
-                        "ensoleillement": row["ensoleillement"]
-                    })
+                    all_months[int(row["date"].month)].append(row.to_dict())
                 departements_traités.add(commune["departement"])
-                break  # sortie du retry si succès
+                break
             except Exception as e:
                 print(f"❌ Tentative {attempt} échouée pour {commune['nom']} ({commune['departement']}): {e}")
                 if attempt < MAX_RETRIES:
@@ -107,13 +108,11 @@ def run_temperature_extraction(year):
 
         time.sleep(SLEEP_BETWEEN_CALLS)
 
-    # Sauvegarde des fichiers mensuels
     for month, rows in all_months.items():
         output_file = os.path.join(OUTPUT_FOLDER, f"{year}-{month:02d}-open-meteo.csv")
         pd.DataFrame(rows).to_csv(output_file, index=False, float_format="%.2f")
         print(f"✅ Fichier sauvegardé : {output_file}")
 
-    # Vérifie les départements manquants
     tous_deps = {c["departement"] for c in prefectures}
     manquants = sorted(tous_deps - departements_traités)
     if manquants:
@@ -122,9 +121,8 @@ def run_temperature_extraction(year):
         print("✅ Tous les départements ont été traités avec succès.")
 
 if __name__ == "__main__":
+    import sys
     if len(sys.argv) != 2:
         print("Usage: python fetch_open_meteo.py <year>")
         sys.exit(1)
-
-    year = sys.argv[1]
-    run_temperature_extraction(year)
+    run_temperature_extraction(sys.argv[1])
