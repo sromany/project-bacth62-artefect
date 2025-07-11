@@ -55,7 +55,7 @@ jobs:
     - name: update dag
       run: |
         echo Loading dags in airflow
-        gcloud compute scp --zone=${{ vars.GCP_ZONE }} --recurse   \
+        gcloud compute scp --zone=${{ vars.GCP_ZONE }} --recurse \
           ${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags \
           ./airflow/dags
 
