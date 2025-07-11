@@ -1,7 +1,7 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from datetime import datetime
 
 def say_hello():
@@ -10,7 +10,7 @@ def say_hello():
 with DAG(
     dag_id="hello_world_dag",
     start_date=datetime(2023, 1, 1),
-    schedule_interval=None,
+    schedule=None,
     catchup=False,
     tags=["example"],
 ) as dag:
