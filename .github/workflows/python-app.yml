@@ -52,10 +52,10 @@ jobs:
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
-    - name: update dag
+    - name: Update Airflow dags
       run: |
         echo Loading dags in airflow
         gcloud compute scp --zone=${{ vars.GCP_ZONE }} --recurse \
-        ./airflow/dags \
-          ${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags
+        ./airflow/dags/* \
+          ${{ vars.GCP_SCP_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags
 
