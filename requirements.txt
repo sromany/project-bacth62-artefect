@@ -1,4 +1,4 @@
-apache-airflow[gcp]==2.8.1
+apache-airflow[gcp]==3.0.3
 google-cloud-bigquery==3.17.2
 pandas>=1.5
 streamlit>=1.32
