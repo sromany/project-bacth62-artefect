@@ -1,9 +1,9 @@
 import os
 import sys
 from datetime import datetime
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.utils.task_group import TaskGroup
 import toml
 
 # Ajouter le dossier src au PYTHONPATH
@@ -22,10 +22,9 @@ project = cfg["gcp"]["project_id"]
 dataset = cfg["gcp"]["dataset"]
 table = cfg["gcp"]["table"]
 
-# Définition du DAG
 default_args = {
     "owner": "airflow",
-    "retries": 1
+    "retries": 1,
 }
 
 with DAG(
@@ -36,26 +35,24 @@ with DAG(
     schedule=None,
     catchup=False,
     tags=["open-meteo", "bigquery", "partition"],
-    params={"years": [2020, 2021, 2022, 2023, 2024]}
+    params={"year": 2024}
 ) as dag:
 
-    with TaskGroup("extract_and_upload_group") as extract_and_upload_group:
-        for year in dag.params["years"]:
-            extract_task = PythonOperator(
-                task_id=f"extract_temperature_{year}",
-                python_callable=run_temperature_extraction,
-                op_args=[year]
-            )
+    extract_temperature = PythonOperator(
+        task_id="extract_temperature",
+        python_callable=run_temperature_extraction,
+        op_args=["{{ params.year }}"],
+    )
 
-            upload_task = PythonOperator(
-                task_id=f"upload_to_bigquery_partitioned_{year}",
-                python_callable=upload_all_months_partitioned,
-                op_args=[
-                    year,
-                    dataset,
-                    table,
-                    project
-                ]
-            )
+    upload_to_bq = PythonOperator(
+        task_id="upload_to_bigquery_partitioned",
+        python_callable=upload_all_months_partitioned,
+        op_args=[
+            "{{ params.year }}",
+            dataset,
+            table,
+            project
+        ],
+    )
 
-            extract_task >> upload_task
+    extract_temperature >> upload_to_bq
