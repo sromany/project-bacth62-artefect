@@ -1,0 +1,24 @@
+name: The Reusable Gcloud setup Workflow
+
+on:
+  workflow_call:
+    inputs:
+      GCP_DEPLOY_SA:
+        required: true
+        type: string
+      GCP_PROJECT_ID:
+        required: true
+        type: string
+
+jobs:
+  gcloud-setup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ inputs.GCP_DEPLOY_SA }}
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ inputs.GCP_PROJECT_ID }}
