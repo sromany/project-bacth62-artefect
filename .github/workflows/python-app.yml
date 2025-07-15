@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build:
+    if: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -63,8 +64,8 @@ jobs:
           ${{ vars.GCP_SCP_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags
 
   install-package:
+    # needs: build
     runs-on: ubuntu-latest
-    needs: build
     steps:
     - uses: actions/checkout@v4
     - name: GCloud Auth Setup
@@ -74,5 +75,5 @@ jobs:
         project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Install project package
       run: |
-        gcloud compute ssh ${{ vars.GCP_AIRFLOW_INSTANCE }} --zone=${{ vars.GCP_ZONE }} --command \
-          "pip install --index-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ project-bacth62-artefect"
+        # gcloud compute ssh ${{ secrets.GCP_INSTANCE_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }} --zone=${{ vars.GCP_ZONE }} --command "cd code/sromany/project62/;id -a;echo ${!PYTHON*};pwd;/home/stephane/.pyenv/shims/pip -h"
+        gcloud compute ssh ${{ secrets.GCP_INSTANCE_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }} --zone=${{ vars.GCP_ZONE }} --command \ "/home/stephane/.pyenv/shims/pip install --index-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ project62"
