@@ -74,5 +74,5 @@ jobs:
         project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Install project package
       run: |
-        gcloud compute ssh ${{ vars.GCP_AIRFLOW_INSTANCE }} --command \
+        gcloud compute ssh ${{ vars.GCP_AIRFLOW_INSTANCE }} --zone=${{ vars.GCP_ZONE }} --command \
           "pip install --index-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ project-bacth62-artefect"
