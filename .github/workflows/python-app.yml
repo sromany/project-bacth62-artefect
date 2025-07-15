@@ -11,16 +11,16 @@ permissions:
   contents: read
 
 jobs:
-  preworkflow:
-    uses: ./.github/workflows/reusable-gcloud-setup.yml
-    with:
-        GCP_DEPLOY_SA: "${{ secrets.GCP_DEPLOY_SA }}"
-        GCP_PROJECT_ID: "${{ vars.GCP_AIRFLOW_PROJECT_ID }}"
-
   build:
-    needs: preworkflow
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    - name: GCloud Auth Setup
+      uses: ./.github/actions/gcloud-auth
+      with:
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+        project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Set up Python 3.12
       uses: actions/setup-python@v3
       with:
@@ -37,25 +37,24 @@ jobs:
       run: |
         python -m build
     - name: Push python package on registry
+      continue-on-error: true
       run: |
-        python -m twine upload --repository-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ \
+        python -m twine upload  --verbose \
+        --repository-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ \
         -u oauth2accesstoken \
         -p "$(gcloud auth application-default print-access-token)" \
         dist/*
 
   export-dags:
-    needs: [ preworkflow, build ]
+    needs: build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: ./.github/workflows/reusable-gcloud-setup.yml
+    - name: GCloud Auth Setup
+      uses: ./.github/actions/gcloud-auth
       with:
-        GCP_DEPLOY_SA: "${{ secrets.GCP_DEPLOY_SA }}"
-        GCP_PROJECT_ID: "${{ vars.GCP_AIRFLOW_PROJECT_ID }}"
-    - name: Install project package
-      run: |
-        gcloud compute ssh ${{ vars.GCP_AIRFLOW_INSTANCE }} --command \
-          pip install --index-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ project-bacth62-artefect
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+        project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Update Airflow dags
       run: |
         echo Loading dags in airflow
@@ -65,8 +64,14 @@ jobs:
 
   install-package:
     runs-on: ubuntu-latest
-    needs: [ preworkflow, build ]
+    needs: build
     steps:
+    - uses: actions/checkout@v4
+    - name: GCloud Auth Setup
+      uses: ./.github/actions/gcloud-auth
+      with:
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+        project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Install project package
       run: |
         gcloud compute ssh ${{ vars.GCP_AIRFLOW_INSTANCE }} --command \
