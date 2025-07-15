@@ -11,14 +11,16 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/workflows/reusable-gcloud-setup.yml
-      with:
+  preworkflow:
+    uses: ./.github/workflows/reusable-gcloud-setup.yml
+    with:
         GCP_DEPLOY_SA: "${{ secrets.GCP_DEPLOY_SA }}"
         GCP_PROJECT_ID: "${{ vars.GCP_AIRFLOW_PROJECT_ID }}"
+
+  build:
+    needs: preworkflow
+    runs-on: ubuntu-latest
+    steps:
     - name: Set up Python 3.12
       uses: actions/setup-python@v3
       with:
@@ -42,7 +44,7 @@ jobs:
         dist/*
 
   export-dags:
-    needs: [ build ]
+    needs: [ preworkflow, build ]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -63,7 +65,7 @@ jobs:
 
   install-package:
     runs-on: ubuntu-latest
-    needs: [ build ]
+    needs: [ preworkflow, build ]
     steps:
     - name: Install project package
       run: |
