@@ -1,9 +1,10 @@
 import os
 import sys
 from datetime import datetime
-
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.utils.task_group import TaskGroup
+import toml
 
 # Ajouter le dossier src au PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src")))
@@ -11,6 +12,17 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from project_batch62_artefact.fetch_open_meteo import run_temperature_extraction
 from project_batch62_artefact.upload_partitioned_bq import upload_all_months_partitioned
 
+# Charger la config TOML
+def load_config():
+    config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "app_config.toml")
+    return toml.load(config_path)
+
+cfg = load_config()
+project = cfg["gcp"]["project_id"]
+dataset = cfg["gcp"]["dataset"]
+table = cfg["gcp"]["table"]
+
+# Définition du DAG
 default_args = {
     "owner": "airflow",
     "retries": 1
@@ -24,24 +36,26 @@ with DAG(
     schedule=None,
     catchup=False,
     tags=["open-meteo", "bigquery", "partition"],
-    params={"year": 2024}
+    params={"years": [2020, 2021, 2022, 2023, 2024]}
 ) as dag:
 
-    extract_temperature = PythonOperator(
-        task_id="extract_temperature",
-        python_callable=run_temperature_extraction,
-        op_args=["{{ params.year }}"]
-    )
+    with TaskGroup("extract_and_upload_group") as extract_and_upload_group:
+        for year in dag.params["years"]:
+            extract_task = PythonOperator(
+                task_id=f"extract_temperature_{year}",
+                python_callable=run_temperature_extraction,
+                op_args=[year]
+            )
 
-    upload_to_bq = PythonOperator(
-        task_id="upload_to_bigquery_partitioned",
-        python_callable=upload_all_months_partitioned,
-        op_args=[
-            "{{ params.year }}",
-            "open_meteo_dataset",     # → nom du dataset BigQuery
-            "meteo",                  # → nom de la table
-            "spartan-metric-461712-i9"          # → remplace par l'ID réel de ton projet GCP
-        ]
-    )
+            upload_task = PythonOperator(
+                task_id=f"upload_to_bigquery_partitioned_{year}",
+                python_callable=upload_all_months_partitioned,
+                op_args=[
+                    year,
+                    dataset,
+                    table,
+                    project
+                ]
+            )
 
-    extract_temperature >> upload_to_bq
+            extract_task >> upload_task

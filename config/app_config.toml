@@ -1,0 +1,4 @@
+[gcp]
+project_id = "spartan-metric-461712-i9"
+dataset = "open_meteo_dataset"
+table = "meteo"

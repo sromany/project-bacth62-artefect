@@ -4,7 +4,7 @@ import os
 import time
 from collections import defaultdict
 
-API_URL = "https://historical-forecast-api.open-meteo.com/v1/forecast"
+API_URL = "https://archive-api.open-meteo.com/v1/archive"
 TIMEZONE = "Europe/Paris"
 OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
 SLEEP_BETWEEN_CALLS = 3
@@ -57,7 +57,13 @@ def fetch_weather(commune, year):
     }
     r = requests.get(API_URL, params=params, timeout=60)
     r.raise_for_status()
-    return r.json()
+    data = r.json()
+
+    # ⚠️ Protection : ne pas traiter si les données sont manquantes
+    if not data.get("daily") or not data["daily"].get("temperature_2m_mean"):
+        raise ValueError("Réponse API vide ou invalide (pas de température)")
+
+    return data
 
 def process_weather(commune, response, year):
     df = pd.DataFrame({
@@ -65,6 +71,11 @@ def process_weather(commune, response, year):
         "temperature": response["daily"]["temperature_2m_mean"],
         "ensoleillement": response["daily"]["sunshine_duration"]
     })
+    
+    # Si tout est null → on ne retourne rien
+    if df["temperature"].isnull().all():
+        raise ValueError(f"Pas de données météo valides pour {commune['nom']}")
+
     df["mois"] = df["date"].dt.month
 
     result = df.groupby("mois").agg({
@@ -109,6 +120,9 @@ def run_temperature_extraction(year):
         time.sleep(SLEEP_BETWEEN_CALLS)
 
     for month, rows in all_months.items():
+        if not rows:
+            print(f"⚠️ Aucune donnée météo disponible pour {year}-{month:02d}")
+            continue
         output_file = os.path.join(OUTPUT_FOLDER, f"{year}-{month:02d}-open-meteo.csv")
         pd.DataFrame(rows).to_csv(output_file, index=False, float_format="%.2f")
         print(f"✅ Fichier sauvegardé : {output_file}")
