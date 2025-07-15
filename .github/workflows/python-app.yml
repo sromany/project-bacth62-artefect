@@ -25,9 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then
-          pip install -r requirements.txt;
-        elif [ -f requirements.in ]; then
+        if [ -f requirements.in ]; then
           pip install -r requirements.in;
         else
           echo "No requirement found!"

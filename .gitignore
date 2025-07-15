@@ -213,3 +213,6 @@ __marimo__/
 
 # Airflow
 .airflow
+logs/
+data/
+config/app_config.toml
