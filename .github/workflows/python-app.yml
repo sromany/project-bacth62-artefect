@@ -29,7 +29,7 @@ jobs:
         fi
     - name: Build project python package
       run: |
-
+        echo Building...
   export-dags:
     needs: [ build ]
     runs-on: ubuntu-latest
@@ -43,6 +43,10 @@ jobs:
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
+    - name: Install project package
+      run: |
+        gcloud compute ssh ${{ vars.GCP_AIRFLOW_INSTANCE }} --command \
+          pip install --index-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ project-bacth62-artefect
     - name: Update Airflow dags
       run: |
         echo Loading dags in airflow
