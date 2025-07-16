@@ -15,6 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    - name: GCloud Auth Setup
+      uses: ./.github/actions/gcloud-auth
+      with:
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+        project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Set up Python 3.12
       uses: actions/setup-python@v3
       with:
@@ -29,19 +35,31 @@ jobs:
         fi
     - name: Build project python package
       run: |
+        python -m build
+    - name: Build airflow image
+      run: |
+        # Building local airflow custom image
+        docker build -f airflow/Dockerfile -t europe-west9-docker.pkg.dev/fluent-empire-461712-u3/artefact/apache/custom-airflow:3.0.2  .
+        docker push europe-west9-docker.pkg.dev/fluent-empire-461712-u3/artefact/apache/custom-airflow:3.0.2
+    - name: Push python package on registry
+      continue-on-error: true
+      run: |
+        python -m twine upload  --verbose \
+        --repository-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ \
+        -u oauth2accesstoken \
+        -p "$(gcloud auth application-default print-access-token)" \
+        dist/*
 
   export-dags:
-    needs: [ build ]
+    if: false
+    needs: build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Authenticate with Google Cloud
-      uses: google-github-actions/auth@v2
+    - name: GCloud Auth Setup
+      uses: ./.github/actions/gcloud-auth
       with:
         credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
         project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
     - name: Update Airflow dags
       run: |
@@ -49,3 +67,18 @@ jobs:
         gcloud compute scp --zone=${{ vars.GCP_ZONE }} --recurse \
         ./airflow/dags/* \
           ${{ vars.GCP_SCP_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags
+
+  install-package:
+    if: false
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: GCloud Auth Setup
+      uses: ./.github/actions/gcloud-auth
+      with:
+        credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+        project_id: ${{ vars.GCP_AIRFLOW_PROJECT_ID }}
+    - name: Install project package
+      run: |
+        gcloud compute ssh ${{ secrets.GCP_INSTANCE_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }} --zone=${{ vars.GCP_ZONE }} --command \ "/home/stephane/.pyenv/shims/pip install --index-url https://${{vars.REGISTRY_PYTHON_ZONE}}-python.pkg.dev/${{vars.REGISTRY_PYTHON_PROJECT_ID}}/${{vars.REGISTRY_NAME}}/ project62"
