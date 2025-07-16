@@ -1,9 +1,22 @@
-from airflow.decorators import task
-from airflow import DAG
-import pandas as pd
+import os
+import toml
 import datetime
-from airflow.providers.standard.operators.empty import EmptyOperator
+import pandas as pd
+from airflow import DAG
+from airflow.decorators import task
 from scipy.stats import linregress
+
+# Charger la config TOML
+def load_config():
+    config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "app_config.toml")
+    return toml.load(config_path)
+
+cfg = load_config()
+bucket_path = cfg["gcp"]["bucket_path"]
+project_id = cfg["gcp"]["project_id"]
+dataset = cfg["gcp"]["dataset"]
+table_conso = cfg["gcp"]["table_conso"]
+table_reg = cfg["gcp"]["table_reg"]
 
 def get_departement_regression(df, column_name, min_points=2, verbose=True):
     results = []
@@ -33,11 +46,8 @@ with DAG(
 
     @task()
     def load_csv():
-        df = pd.read_csv(
-            "gs://projet-data-lake-ghumbert/consommation-electrique-par-secteur-dactivite-departement.csv",
-            sep=';',
-            low_memory=False
-        )
+        file_path = f"{bucket_path}/conso-departement.csv"
+        df = pd.read_csv(file_path, sep=';', low_memory=False)
         print("✅ CSV chargé depuis GCS")
         print(df.head(3))
         return df
@@ -53,9 +63,7 @@ with DAG(
             "Conso totale  usages non thermosensibles (MWh)",
             "DJU à TR"
         ]
-        df_clean = df[colonnes_utiles]
-        #rename columns for bigquery compatibility
-        df_clean = df_clean.rename(columns={
+        df_clean = df[colonnes_utiles].rename(columns={
             "Année": "annee",
             "Code Département": "code_departement",
             "Part thermosensible (%)": "part_thermosensible",
@@ -65,42 +73,37 @@ with DAG(
             "DJU à TR": "dju_a_tr"
         })
         df_clean = df_clean.dropna(subset=["part_thermosensible"])
-        print("✅ CSV nétoyé et colonnes utiles sélectionnées")
+        print("✅ Données nettoyées")
         print(df_clean.head(3))
         return df_clean
     
     @task()
     def compute_regression(df):
-        df_thermosensibility_models = get_departement_regression(df, 'thermosensibilite_totale_kWh_DJU')
-        print("✅ Modèles de régression pour la thermosensibilité calculés")
-        df_non_thermosensible_conso_models = get_departement_regression(df, 'conso_usages_non_thermosensibles_MWh')
-        print("✅ Modèles de régression pour la consommation non thermosensible calculés")
-
-        print(df_thermosensibility_models.head(3))
-        print(df_non_thermosensible_conso_models.head(3))
+        df_thermo = get_departement_regression(df, 'thermosensibilite_totale_kWh_DJU')
+        df_non_thermo = get_departement_regression(df, 'conso_usages_non_thermosensibles_MWh')
+        print("✅ Régression calculée")
         return {
-            "thermosensibility": df_thermosensibility_models.to_dict(),
-            "non_thermosensible": df_non_thermosensible_conso_models.to_dict()
+            "thermosensibility": df_thermo.to_dict(),
+            "non_thermosensible": df_non_thermo.to_dict()
         }
 
-    # Export cleaned data to BigQuery
     @task()
     def export_cleaned_data(df_clean):
         df_clean.to_gbq(
-            destination_table="graphic-bonus-461713-m5.sql62_local.conso_elec_departement",
+            destination_table=f"{project_id}.{dataset}.{table_conso}",
             if_exists="replace"
         )
         print("✅ Données nettoyées exportées vers BigQuery")
 
-    # Export regression models to BigQuery by department in a single table
     @task()
     def export_regression_models(dfs_dict):
-        # Combine the two regression model DataFrames
         df_thermo = pd.DataFrame(dfs_dict["thermosensibility"])
         df_non_thermo = pd.DataFrame(dfs_dict["non_thermosensible"])
+
         if df_thermo.empty or df_non_thermo.empty:
             print("⚠ Pas de données à merger.")
             return
+
         df_combined = pd.merge(
             df_thermo,
             df_non_thermo,
@@ -108,13 +111,12 @@ with DAG(
             suffixes=('_thermosensibility', '_non_thermosensible')
         )
         df_combined.to_gbq(
-            destination_table="graphic-bonus-461713-m5.sql62_local.conso_elec_regression_models",
+            destination_table=f"{project_id}.{dataset}.{table_reg}",
             if_exists="replace"
         )
         print("✅ Modèles de régression exportés vers BigQuery")
         print(df_combined.head(3))
         return df_combined
-
 
     t1 = load_csv()
     t2 = process_data(t1)

@@ -2,25 +2,25 @@ import os
 import sys
 from datetime import datetime
 
+import toml
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-import toml
 
-# Ajouter le dossier src au PYTHONPATH
+# Ajouter le dossier src au PYTHONPATH pour les imports custom
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src")))
 
 from project_batch62_artefact.fetch_open_meteo import run_temperature_extraction
 from project_batch62_artefact.upload_partitioned_bq import upload_all_months_partitioned
 
-# Charger la config TOML
+# Chargement de la configuration TOML
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "app_config.toml")
     return toml.load(config_path)
 
 cfg = load_config()
-project = cfg["gcp"]["project_id"]
+project_id = cfg["gcp"]["project_id"]
 dataset = cfg["gcp"]["dataset"]
-table = cfg["gcp"]["table"]
+table_temperature = cfg["gcp"]["table_temperature"]
 
 default_args = {
     "owner": "airflow",
@@ -50,8 +50,8 @@ with DAG(
         op_args=[
             "{{ params.year }}",
             dataset,
-            table,
-            project
+            table_temperature,
+            project_id
         ],
     )
 
