@@ -14,7 +14,7 @@ from project_batch62_artefact.upload_partitioned_bq import upload_all_months_par
 
 # Chargement de la configuration TOML
 def load_config():
-    config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "app_config.toml")
+    config_path = "/opt/airflow/config/app_config.toml"
     return toml.load(config_path)
 
 cfg = load_config()

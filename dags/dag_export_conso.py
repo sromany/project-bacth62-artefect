@@ -8,7 +8,7 @@ from scipy.stats import linregress
 
 # Charger la config TOML
 def load_config():
-    config_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "app_config.toml")
+    config_path = "/opt/airflow/config/app_config.toml"
     return toml.load(config_path)
 
 cfg = load_config()
