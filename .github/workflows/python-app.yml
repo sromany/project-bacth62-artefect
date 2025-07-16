@@ -5,7 +5,7 @@ name: Build and Deploy on PR Merge
 
 on:
   push:
-    branches: [ main, dev, feat/ci-base-pipeline ]
+    branches: [ main, dev ]
 
 permissions:
   contents: read
@@ -36,8 +36,11 @@ jobs:
     - name: Build project python package
       run: |
         python -m build
-    # - name: Build airflow image
-    #   run: docker build -t  .
+    - name: Build airflow image
+      run: |
+        # Building local airflow custom image
+        docker build -f airflow/Dockerfile -t europe-west9-docker.pkg.dev/fluent-empire-461712-u3/artefact/apache/custom-airflow:3.0.2  .
+        docker push europe-west9-docker.pkg.dev/fluent-empire-461712-u3/artefact/apache/custom-airflow:3.0.2
     - name: Push python package on registry
       continue-on-error: true
       run: |
