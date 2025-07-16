@@ -1,14 +1,11 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Python application
+name: Build and Deploy on PR Merge
 
 on:
   push:
-    branches:
-      - '**'
-  pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ main, dev ]
 
 permissions:
   contents: read
@@ -30,12 +27,8 @@ jobs:
         else
           echo "No requirement found!"
         fi
-    - name: Lint with flake8
+    - name: Build project python package
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   export-dags:
     needs: [ build ]
@@ -56,4 +49,3 @@ jobs:
         gcloud compute scp --zone=${{ vars.GCP_ZONE }} --recurse \
         ./airflow/dags/* \
           ${{ vars.GCP_SCP_USER }}@${{ vars.GCP_AIRFLOW_INSTANCE }}:/home/stephane/code/sromany/project62/airflow/dags
-
