@@ -8,3 +8,8 @@ pyarrow
 gcsfs
 pandas-gbq
 google-cloud-bigquery
+
+streamlit
+altair
+folium
+streamlit-folium

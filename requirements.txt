@@ -1,0 +1,6 @@
+streamlit-folium
+folium
+altair
+plotly
+plotly-express
+google-cloud-bigquery[all]
