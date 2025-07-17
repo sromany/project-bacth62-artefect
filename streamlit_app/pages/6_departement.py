@@ -43,13 +43,13 @@ def load_table(query):
 code_int = int(departement_code)
 
 df_departement = load_table(f"""
-    SELECT * 
+    SELECT *
     FROM graphic-bonus-461713-m5.sql62_local.conso_elec_departement
     WHERE code_departement = {code_int}
 """)
 
 df_models = load_table("""
-    SELECT * 
+    SELECT *
     FROM graphic-bonus-461713-m5.sql62_local.conso_elec_regression_models
 """)
 df_models['code_departement'] = df_models['code_departement'].astype(str).str.zfill(2)
@@ -57,7 +57,7 @@ df_models['code_departement'] = df_models['code_departement'].astype(str).str.zf
 departement_code = str(departement_code).zfill(2)
 
 df_meteo = prepare_meteo(load_table("""
-    SELECT * 
+    SELECT *
     FROM spartan-metric-461712-i9.open_meteo_dataset.meteo
 """))
 
@@ -106,7 +106,7 @@ else:
         st.warning(f"⚠️ Estimation non disponible pour ce département ({departement_code}).\n{info}")
 
 # --------------------------
-# Évolution mensuelle de la consommation 
+# Évolution mensuelle de la consommation
 st.subheader(f"📊 Projection de l'évolution de la consommation en {year}")
 
 data_mensuelle = []
@@ -162,8 +162,8 @@ else:
 st.subheader("📚 Historique annuel de la consommation réelle")
 
 expected_cols = [
-    "annee", 
-    "conso_usages_thermosensibles_MWh", 
+    "annee",
+    "conso_usages_thermosensibles_MWh",
     "conso_usages_non_thermosensibles_MWh"
 ]
 

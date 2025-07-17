@@ -1,3 +1,11 @@
 flake8
 loguru
 requests
+
+google-cloud-bigquery
+pandas
+streamlit
+plotly
+toml
+twine
+build

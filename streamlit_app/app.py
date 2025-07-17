@@ -46,15 +46,15 @@ def load_table(query):
     return client.query(query).to_dataframe()
 
 df_departement = load_table("""
-    SELECT * 
+    SELECT *
     FROM graphic-bonus-461713-m5.sql62_local.conso_elec_departement
 """)
 df_models = load_table("""
-    SELECT * 
+    SELECT *
     FROM graphic-bonus-461713-m5.sql62_local.conso_elec_regression_models
 """)
 df_meteo = prepare_meteo(load_table("""
-    SELECT * 
+    SELECT *
     FROM spartan-metric-461712-i9.open_meteo_dataset.meteo
 """))
 df_meteo_indexed = df_meteo.set_index(['departement', 'month']).sort_index()
@@ -116,8 +116,8 @@ En {year}, la consommation des ménages français sera de <span style='color:#00
 # --------------------------
 # Carte Folium
 m = folium.Map(
-    location=[46.8, 2.5], 
-    zoom_start=6, 
+    location=[46.8, 2.5],
+    zoom_start=6,
     tiles=None,
     control_scale=False,
     zoom_control=False,
@@ -188,5 +188,5 @@ clicked_dep = None
 if output and "last_active_drawing" in output and output["last_active_drawing"]:
     props = output["last_active_drawing"]["properties"]
     st.session_state.clicked_dep = props.get("code")
-    st.session_state.clicked_name = props.get("nom") 
+    st.session_state.clicked_name = props.get("nom")
     st.switch_page("pages/6_departement.py")
