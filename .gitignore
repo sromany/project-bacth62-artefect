@@ -213,3 +213,7 @@ __marimo__/
 
 # Airflow
 .airflow
+
+
+.streamlit/secrets.toml
+

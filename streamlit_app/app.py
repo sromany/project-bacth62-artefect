@@ -1,19 +1,31 @@
 import streamlit as st
 import pandas as pd
+import os
 import folium
 from folium.features import GeoJson, GeoJsonTooltip
 import json
 from streamlit_folium import st_folium
 from google.cloud import bigquery
+from google.oauth2 import service_account
 from calculs import (
     prepare_meteo,
     consommation_annuelle_par_departement
 )
 
+# Create API client.
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
+
+client = bigquery.Client(
+    credentials=credentials,
+    project="graphic-bonus-461713-m5",
+)
+
+
 # --------------------------
 # CONFIG
 geojson_url = "streamlit_app/assets/departements_clean.geojson"
-client = bigquery.Client()
 
 # --------------------------
 # UI
