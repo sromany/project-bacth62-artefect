@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import json
-import calendar
 import os
 import sys
 from google.cloud import bigquery
@@ -12,12 +11,12 @@ ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_PATH not in sys.path:
     sys.path.insert(0, ROOT_PATH)
 
-from streamlit_app.config import PROJECT_ID, DATASET, TABLE_TEMPERATURE, TABLE_CONSO
+from streamlit_app.config import PROJECT_ID, DATASET, TABLE_CONSO
 
-st.set_page_config(page_title="Carte météo interactive", layout="wide")
+st.set_page_config(page_title="Carte consommation énergétique", layout="wide")
 
 # --- CONFIGURATION ---
-TABLE_ID = f"{PROJECT_ID}.{DATASET}.{TABLE_TEMPERATURE}"
+TABLE_ID = f"{PROJECT_ID}.{DATASET}.{TABLE_CONSO}"
 GEOJSON_PATH = "streamlit_app/assets/departements.geojson"
 
 @st.cache_data
@@ -32,54 +31,61 @@ def get_departement_mapping(geojson):
     }
 
 @st.cache_data(ttl=3600)
-def load_meteo_data():
+def load_conso_data():
     client = bigquery.Client(project=PROJECT_ID)
     query = f"""
         SELECT
-            EXTRACT(YEAR FROM date) AS annee,
-            EXTRACT(MONTH FROM date) AS mois,
-            departement,
-            ROUND(AVG(temperature), 2) AS temperature_moyenne,
-            ROUND(AVG(ensoleillement), 2) AS ensoleillement_moyen
+            annee,
+            LPAD(CAST(code_departement AS STRING), 2, '0') AS departement,
+            part_thermosensible,
+            thermosensibilite_totale_kWh_DJU,
+            conso_usages_thermosensibles_MWh,
+            conso_usages_non_thermosensibles_MWh,
+            dju_a_tr
         FROM `{TABLE_ID}`
-        GROUP BY annee, mois, departement
     """
     return client.query(query).to_dataframe()
 
-st.title("🗺️ Carte météo par département")
+# --- TITRE ---
+st.title("⚡ Carte de la consommation énergétique par département")
 
 if st.button("🔄 Rafraîchir les données"):
     st.cache_data.clear()
     st.rerun()
 
 geojson = load_geojson()
-df = load_meteo_data()
+df = load_conso_data()
 departement_mapping = get_departement_mapping(geojson)
 df["nom_departement"] = df["departement"].map(departement_mapping)
 
+# --- SÉLECTIONS ---
 annees = sorted(df["annee"].unique())
-mois_possibles = sorted(df["mois"].unique())
-mois_noms = {i: calendar.month_name[i].capitalize() for i in mois_possibles}
+selected_year = st.selectbox("📅 Année", annees, index=len(annees) - 1)
 
 indicateurs = {
-    "Température moyenne (°C)": {
-        "col": "temperature_moyenne",
-        "colorscale": "RdBu_r"
+    "Part d'usages thermosensibles (%)": {
+        "col": "part_thermosensible",
+        "colorscale": "YlOrRd"
     },
-    "Ensoleillement moyen (h)": {
-        "col": "ensoleillement_moyen",
-        "colorscale": ["#001f3f", "#06B5A0", "#FFDC00"]
+    "Conso usages thermosensibles (MWh)": {
+        "col": "conso_usages_thermosensibles_MWh",
+        "colorscale": "Oranges"
+    },
+    "Conso usages non thermosensibles (MWh)": {
+        "col": "conso_usages_non_thermosensibles_MWh",
+        "colorscale": "Blues"
+    },
+    "Thermosensibilité totale (kWh/DJU)": {
+        "col": "thermosensibilite_totale_kWh_DJU",
+        "colorscale": "Viridis"
     }
 }
 
-col1, col2 = st.columns(2)
-selected_year = col1.selectbox("📆 Année", annees, index=len(annees) - 1)
-selected_month = col2.selectbox("🗓️ Mois", options=mois_possibles, format_func=lambda m: mois_noms[m])
-selected_indicator_label = st.radio("📊 Indicateur à afficher", list(indicateurs.keys()))
-selected_column = indicateurs[selected_indicator_label]["col"]
-selected_colorscale = indicateurs[selected_indicator_label]["colorscale"]
+selected_label = st.radio("📊 Indicateur à afficher", list(indicateurs.keys()))
+selected_column = indicateurs[selected_label]["col"]
+selected_colorscale = indicateurs[selected_label]["colorscale"]
 
-df_filtered = df[(df["annee"] == selected_year) & (df["mois"] == selected_month)]
+df_filtered = df[df["annee"] == selected_year]
 
 fig = px.choropleth(
     df_filtered,
@@ -92,7 +98,7 @@ fig = px.choropleth(
     color_continuous_scale=selected_colorscale,
     range_color=(df[selected_column].min(), df[selected_column].max()),
     scope="europe",
-    labels={selected_column: selected_indicator_label},
+    labels={selected_column: selected_label},
 )
 
 fig.update_geos(fitbounds="locations", visible=False)

@@ -216,3 +216,6 @@ __marimo__/
 logs/
 data/
 config/app_config.toml
+config/gcp-key.json
+setup_airflow_gcp.sh
+config/app_config.toml

@@ -9,4 +9,6 @@ def load_config():
 cfg = load_config()
 PROJECT_ID = cfg["gcp"]["project_id"]
 DATASET = cfg["gcp"]["dataset"]
-TABLE = cfg["gcp"]["table"]
+TABLE_TEMPERATURE = cfg["gcp"]["table_temperature"]
+TABLE_CONSO = cfg["gcp"]["table_conso"]
+TABLE_REG = cfg["gcp"]["table_reg"]
