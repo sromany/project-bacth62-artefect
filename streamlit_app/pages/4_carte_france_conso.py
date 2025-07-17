@@ -12,7 +12,7 @@ from calculs import (
 
 # --------------------------
 # CONFIG
-geojson_url = "streamlit_app/assets/departements_clean.geojson"
+geojson_url = "streamlit/assets/departements_clean.geojson"
 client = bigquery.Client()
 
 # --------------------------

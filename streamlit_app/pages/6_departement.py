@@ -10,19 +10,29 @@ from calculs import (
 # Initialisation
 client = bigquery.Client()
 
-# Valeurs par défaut (code + nom)
+# Valeurs par défaut
 DEFAULT_DEP_CODE = "75"
 DEFAULT_DEP_NAME = "Paris"
 
-# Récupération du département sélectionné ou valeurs par défaut
-departement_code = st.session_state.get("clicked_dep", DEFAULT_DEP_CODE)
-departement_name = st.session_state.get("clicked_name", DEFAULT_DEP_NAME)
+# --------------------------
+# Choix du département
+st.sidebar.header("Département")
 
-# Message si aucun clic utilisateur
-if "clicked_dep" not in st.session_state:
-    st.info(f"Aucun département sélectionné, affichage par défaut : {departement_name} ({departement_code})")
+input_dep_code = st.sidebar.text_input("Code du département (ex: 75 pour Paris)", value="", max_chars=3)
 
-st.title(f"📊 Analyse du département {departement_name} ({departement_code})")
+# Saisie manuelle > clic carte > défaut
+if input_dep_code.strip():
+    departement_code = input_dep_code.zfill(2)
+    departement_name = None  # Nom inconnu
+else:
+    departement_code = st.session_state.get("clicked_dep", DEFAULT_DEP_CODE)
+    departement_name = st.session_state.get("clicked_name", DEFAULT_DEP_NAME)
+
+# Affichage du titre
+if departement_name:
+    st.title(f"📊 Analyse du département {departement_name} ({departement_code})")
+else:
+    st.title(f"📊 Analyse du département {departement_code}")
 
 # --------------------------
 # Chargement des données
@@ -62,8 +72,6 @@ temp_offset = st.slider(
 
 # --------------------------
 # Consommation estimée pour le mois sélectionné
-
-# Filtrer les températures pour le bon département + mois
 df_meteo_dep = df_meteo[
     (df_meteo['departement'] == departement_code) &
     (df_meteo['month'] == month)
@@ -85,19 +93,18 @@ else:
     )
 
     if conso_mensuelle is not None:
-      st.subheader("📈 Consommation estimée pour le mois")
-      
-      st.markdown(f"""
-      ### 🧮 {info['total']:,.0f} MWh
+        st.subheader("📈 Consommation estimée pour le mois")
+        st.markdown(f"""
+        ### 🧮 {info['total']:,.0f} MWh
 
-      - 🔥 Part thermosensible : **{info['conso_thermo']:,.0f} MWh**
-      - 🧊 Part non thermosensible : **{info['conso_non_thermo']:,.0f} MWh**
-      - 🌡️ Température moyenne corrigée : **{info['temp_corrigee']}°C**
-      - 📏 Seuil de chauffage : **{info['seuil']}°C**
-      """)
-
+        - 🔥 Part thermosensible : **{info['conso_thermo']:,.0f} MWh**
+        - 🧊 Part non thermosensible : **{info['conso_non_thermo']:,.0f} MWh**
+        - 🌡️ Température moyenne corrigée : **{info['temp_corrigee']}°C**
+        - 📏 Seuil de chauffage : **{info['seuil']}°C**
+        """)
     else:
         st.warning(f"⚠️ Estimation non disponible pour ce département ({departement_code}).\n{info}")
+
 # --------------------------
 # Évolution mensuelle de la consommation 
 st.subheader(f"📊 Projection de l'évolution de la consommation en {year}")
@@ -151,10 +158,9 @@ else:
     st.altair_chart(chart, use_container_width=True)
 
 # --------------------------
-# Historique de consommation annuelle, affichage de l'historique de df_departement
+# Historique de consommation annuelle
 st.subheader("📚 Historique annuel de la consommation réelle")
 
-# S’assurer que les colonnes existent
 expected_cols = [
     "annee", 
     "conso_usages_thermosensibles_MWh", 
@@ -171,7 +177,6 @@ else:
         df_historique["conso_usages_non_thermosensibles_MWh"]
     )
 
-    # Reshape pour Altair
     df_melt_hist = df_historique.melt(
         id_vars="annee",
         value_vars=["Conso totale", "conso_usages_thermosensibles_MWh", "conso_usages_non_thermosensibles_MWh"],
@@ -179,7 +184,6 @@ else:
         value_name="MWh"
     )
 
-    # Renommer pour affichage plus clair
     df_melt_hist["Type"] = df_melt_hist["Type"].replace({
         "conso_usages_thermosensibles_MWh": "Thermosensible",
         "conso_usages_non_thermosensibles_MWh": "Non thermosensible"
