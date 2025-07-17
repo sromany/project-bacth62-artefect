@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from google.cloud import bigquery
 
+# Initialisation
+client = bigquery.Client()
+
 # --------------------
 @st.cache_data
 def load_table(query):
