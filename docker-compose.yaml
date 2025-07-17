@@ -82,7 +82,11 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
-    command: scheduler
+    command: >
+      bash -c "
+        chown -R 50000:0 /opt/airflow/logs /opt/airflow/config &&
+        exec airflow scheduler
+      "
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
@@ -97,7 +101,11 @@ services:
 
   airflow-dag-processor:
     <<: *airflow-common
-    command: dag-processor
+    command: >
+      bash -c "
+        chown -R 50000:0 /opt/airflow/logs /opt/airflow/config &&
+        exec airflow dag-processor
+      "
     healthcheck:
       test: ["CMD-SHELL", 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
       interval: 30s

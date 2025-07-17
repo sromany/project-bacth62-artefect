@@ -18,7 +18,7 @@ st.set_page_config(page_title="Carte météo interactive", layout="wide")
 
 # --- CONFIGURATION ---
 TABLE_ID = f"{PROJECT_ID}.{DATASET}.{TABLE_TEMPERATURE}"
-GEOJSON_PATH = "streamlit_app/assets/departements.geojson"
+GEOJSON_PATH = os.path.join(os.path.dirname(__file__), "assets", "departements.geojson")
 
 @st.cache_data
 def load_geojson():
