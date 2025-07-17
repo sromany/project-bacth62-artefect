@@ -1,4 +1,6 @@
 [gcp]
 project_id = "spartan-metric-461712-i9"
-dataset = "open_meteo_dataset"
-table = "meteo"
+dataset = "weather-data"
+table_temperature = "temperature_mensuelle"
+table_conso = "conso_electrique"
+table_reg = "model_regression_result"

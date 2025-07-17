@@ -7,15 +7,15 @@ import sys
 from google.cloud import bigquery
 
 # --- Rendre streamlit_app importable ---
-ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_PATH not in sys.path:
     sys.path.insert(0, ROOT_PATH)
 
-from streamlit_app.config import PROJECT_ID, DATASET, TABLE
+from streamlit_app.config import PROJECT_ID, DATASET, TABLE_TEMPERATURE
 
 st.set_page_config(page_title="Comparaison des températures", layout="wide")
 
-TABLE_ID = f"{PROJECT_ID}.{DATASET}.{TABLE}"
+TABLE_ID = f"{PROJECT_ID}.{DATASET}.{TABLE_TEMPERATURE}"
 
 @st.cache_data(ttl=3600)
 def load_meteo_data():
