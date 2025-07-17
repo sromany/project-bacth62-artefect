@@ -37,5 +37,4 @@ stop:
 
 # Fixe les permissions dans les conteneurs (utile si erreur Permission denied)
 fix-perms:
-	sudo docker compose exec airflow-scheduler chown -R 50000:0 /opt/airflow/logs /opt/airflow/config
-	sudo docker compose exec airflow-worker chown -R 50000:0 /opt/airflow/logs /opt/airflow/config
+	sudo chown -R 50000:0 logs config dags streamlit_app

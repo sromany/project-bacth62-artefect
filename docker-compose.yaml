@@ -217,5 +217,17 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/config/gcp-key.json
+    volumes:
+      - ./config:/app/config  # Pour la clé et autres configs modifiables
+      - ${AIRFLOW_PROJ_DIR:-.}/streamlit_app:/opt/streamlit_app
+
 volumes:
   postgres-db-volume:

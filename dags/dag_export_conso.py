@@ -46,7 +46,7 @@ with DAG(
 
     @task()
     def load_csv():
-        file_path = f"{bucket_path}/conso-departement.csv"
+        file_path = f"{bucket_path}/consommation-electrique-par-secteur-dactivite-departement.csv"
         df = pd.read_csv(file_path, sep=';', low_memory=False)
         print("✅ CSV chargé depuis GCS")
         print(df.head(3))
