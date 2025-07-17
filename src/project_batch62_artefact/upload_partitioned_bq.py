@@ -4,9 +4,21 @@ from datetime import datetime
 from google.cloud import bigquery
 from google.api_core.exceptions import NotFound
 
+
+def get_dataset_location(project: str, dataset: str) -> str:
+    """Retourne la région du dataset BigQuery."""
+    temp_client = bigquery.Client(project=project)
+    dataset_ref = temp_client.get_dataset(f"{project}.{dataset}")
+    return dataset_ref.location
+
+
 def upload_all_months_partitioned(year: int, dataset: str, table: str, project: str):
     year = int(year)
-    client = bigquery.Client(project=project)
+
+    # 🔍 Récupérer dynamiquement la région du dataset
+    location = get_dataset_location(project, dataset)
+    client = bigquery.Client(project=project, location=location)
+
     data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
     base_table_id = f"{project}.{dataset}.{table}"
 
@@ -30,8 +42,9 @@ def upload_all_months_partitioned(year: int, dataset: str, table: str, project: 
             field="date",
         )
         client.create_table(table_ref)
-        print("✅ Table créée avec partition mensuelle sur le champ 'date'")
+        print(f"✅ Table créée avec partition mensuelle sur le champ 'date' (région : {location})")
 
+    # 🚀 Chargement des 12 fichiers mensuels
     for month in range(1, 13):
         file_path = os.path.join(data_dir, f"{year}-{month:02d}-open-meteo.csv")
         if not os.path.exists(file_path):
