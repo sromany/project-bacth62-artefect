@@ -1,0 +1,19 @@
+[gcp]
+
+# ID du projet GCP (ex: "my-gcp-project-id")
+project_id = "your-gcp-project-id"
+
+# Nom du dataset BigQuery commun
+dataset = "your_dataset"
+
+# Nom de la table pour les données météo (Open-Meteo)
+table_temperature = "your_temperature_table"
+
+# Nom de la table pour les données de consommation
+table_conso = "your_conso_table"
+
+# Nom de la table pour les données de régression
+table_reg = "your_reg_table"
+
+# Bucket GCS contenant les fichiers d'entrée CSV
+bucket_path = "gs://your-bucket-name"

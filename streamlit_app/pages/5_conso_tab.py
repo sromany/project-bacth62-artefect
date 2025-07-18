@@ -2,6 +2,13 @@ import streamlit as st
 import pandas as pd
 from google.cloud import bigquery
 
+from streamlit_app.config import (
+    PROJECT_ID, DATASET , TABLE_CONSO, TABLE_REG, TABLE_TEMPERATURE
+)
+
+def table_ref(table):
+    return f"{PROJECT_ID}.{DATASET}.{table}"
+
 # Initialisation
 client = bigquery.Client()
 
@@ -16,18 +23,10 @@ def prepare_meteo(df):
     df['month'] = pd.to_datetime(df['date']).dt.month.astype(int)
     return df
 # --------------------
-df_departement = load_table("""
-    SELECT * 
-    FROM graphic-bonus-461713-m5.sql62_local.conso_elec_departement
-""")
-df_models = load_table("""
-    SELECT * 
-    FROM graphic-bonus-461713-m5.sql62_local.conso_elec_regression_models
-""")
-df_meteo = load_table("""
-    SELECT * 
-    FROM spartan-metric-461712-i9.open_meteo_dataset.meteo
-""")
+df_departement = load_table(f"SELECT * FROM {table_ref(TABLE_CONSO)}")
+df_models = load_table(f"SELECT * FROM {table_ref(TABLE_REG)}")
+df_meteo = prepare_meteo(load_table(f"SELECT * FROM {table_ref(TABLE_TEMPERATURE)}"))
+
 df_meteo = prepare_meteo(df_meteo)
 
 

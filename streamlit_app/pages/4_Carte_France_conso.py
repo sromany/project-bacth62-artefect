@@ -1,105 +1,60 @@
 import streamlit as st
 import pandas as pd
-import os
 import folium
 from folium.features import GeoJson, GeoJsonTooltip
 import json
+import os
 from streamlit_folium import st_folium
 from google.cloud import bigquery
-from google.oauth2 import service_account
 from calculs import (
     prepare_meteo,
     consommation_annuelle_par_departement
 )
-
-# Create API client.
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
+from streamlit_app.config import (
+    PROJECT_ID, DATASET, TABLE_CONSO, TABLE_REG, TABLE_TEMPERATURE
 )
 
-client = bigquery.Client(
-    credentials=credentials,
-    project="graphic-bonus-461713-m5",
-)
+# --------- CHEMIN ABSOLU DU FICHIER GEOJSON ----------
+HERE = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.abspath(os.path.join(HERE, "..", "assets"))
+GEOJSON_FILENAME = "departements_clean.geojson"
+GEOJSON_PATH = os.path.join(ASSETS_DIR, GEOJSON_FILENAME)
 
+# --------- FONCTION UTILITAIRE BQ TABLE REF ----------
+def table_ref(table):
+    return f"{PROJECT_ID}.{DATASET}.{table}"
 
-# --------------------------
-# CONFIG
-geojson_url = "streamlit_app/assets/departements_clean.geojson"
+# --------- BQ CLIENT ---------
+client = bigquery.Client(project=PROJECT_ID)
 
-# --------------------------
-# UI
-st.markdown("""
-    <style>
-        iframe.stCustomComponentV1 {
-            height: 600px !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("Prévision de la consommation électrique des ménages en France")
-
-# --------------------------
-# Chargement des données
+# --------- DATA ---------
 @st.cache_data
 def load_table(query):
     return client.query(query).to_dataframe()
 
-df_departement = load_table("""
-    SELECT *
-    FROM graphic-bonus-461713-m5.sql62_local.conso_elec_departement
-""")
-df_models = load_table("""
-    SELECT *
-    FROM graphic-bonus-461713-m5.sql62_local.conso_elec_regression_models
-""")
-df_meteo = prepare_meteo(load_table("""
-    SELECT *
-    FROM spartan-metric-461712-i9.open_meteo_dataset.meteo
-"""))
+df_departement = load_table(f"SELECT * FROM `{table_ref(TABLE_CONSO)}`")
+df_models = load_table(f"SELECT * FROM `{table_ref(TABLE_REG)}`")
+df_meteo = prepare_meteo(load_table(f"SELECT * FROM `{table_ref(TABLE_TEMPERATURE)}`"))
 df_meteo_indexed = df_meteo.set_index(['departement', 'month']).sort_index()
 
-# --------------------------
-# Widgets
-# departement_code = st.sidebar.number_input("Code département", min_value=1, max_value=95, value=90)
-# year = st.sidebar.number_input("Année", min_value=2020, max_value=2030, value=2026)
-# temp_offset = st.sidebar.slider("Hypothèse d'écart de température (°C)", min_value=-5.0, max_value=5.0, step=0.5, value=0.0)
-# month = st.sidebar.slider("Mois", min_value=1, max_value=12, value=2)
-
+# --------- UI WIDGETS ----------
 col1, col2 = st.columns(2)
-
 with col1:
     year = st.number_input("Année", min_value=2020, max_value=2030, value=2026, key="year_input")
-
 with col2:
     temp_offset = st.slider(
         "Hypothèse d'écart de température (°C)",
         min_value=-5.0, max_value=5.0, step=0.5, value=0.0, key="temp_slider"
     )
 
-# --------------------------
-# Température du mois
-# @st.cache_data
-# def get_temp_moyenne_mois(df_meteo, departement_code, month):
-#     code_str = f"{departement_code:02d}"
-#     df_mois = df_meteo[
-#         (df_meteo['departement'] == code_str) &
-#         (df_meteo['month'] == month)
-#     ]
-#     return df_mois['temperature'].mean()
-
-# temp_moyenne_mois = get_temp_moyenne_mois(df_meteo, departement_code, month)
-
-# --------------------------
-# Conso annuelle
+# --------- CALCULS ----------
 df_conso_annuelle = consommation_annuelle_par_departement(year, df_models, df_meteo_indexed, temp_offset=temp_offset)
 df_conso_annuelle['code_departement'] = df_conso_annuelle['code_departement'].astype(str).str.zfill(2)
 
-# Calcul de la conso totale France en TWh
+# Total France (TWh)
 conso_totale_MWh = df_conso_annuelle["conso_totale_MWh"].sum()
 conso_totale_TWh = conso_totale_MWh / 1_000_000
 
-# Formulation conditionnelle
 if temp_offset == 0:
     phrase_temp = ""
 elif temp_offset > 0:
@@ -113,11 +68,14 @@ En {year}, la consommation des ménages français sera de <span style='color:#00
 </div>
 """, unsafe_allow_html=True)
 
-# --------------------------
-# Carte Folium
+# --------- CHARGEMENT GEOJSON ----------
+with open(GEOJSON_PATH, encoding="utf-8") as f:
+    geojson_data = json.load(f)
+
+# --------- MAP ----------
 m = folium.Map(
-    location=[46.8, 2.5],
-    zoom_start=6,
+    location=[46.8, 2.5], 
+    zoom_start=6, 
     tiles=None,
     control_scale=False,
     zoom_control=False,
@@ -135,8 +93,9 @@ folium.Rectangle(
     fill_opacity=1,
     interactive=False
 ).add_to(m)
+
 folium.Choropleth(
-    geo_data=geojson_url,
+    geo_data=geojson_data,
     data=df_conso_annuelle,
     columns=["code_departement", "conso_totale_MWh"],
     key_on="feature.properties.code",
@@ -148,13 +107,8 @@ folium.Choropleth(
 ).add_to(m)
 m.get_root().html.add_child(folium.Element("<style>.legend { display: none !important; }</style>"))
 
-# --------------------------
-# Ajout des infobulles personnalisées
-with open(geojson_url, encoding="utf-8") as f:
-    geojson_data = json.load(f)
-
+# --------- TOOLTIP PERSONNALISÉE ----------
 conso_dict = df_conso_annuelle.set_index("code_departement")["conso_totale_MWh"].to_dict()
-
 for feature in geojson_data["features"]:
     code = feature["properties"]["code"]
     nom = feature["properties"]["nom"]
@@ -170,7 +124,6 @@ for feature in geojson_data["features"]:
     else:
         feature["properties"]["tooltip_html"] = f"<b>{nom}</b><br/>Données manquantes"
 
-# Création d’un seul GeoJson avec tooltip automatique
 GeoJson(
     geojson_data,
     style_function=lambda x: {
@@ -181,12 +134,10 @@ GeoJson(
     tooltip=GeoJsonTooltip(fields=["tooltip_html"], aliases=[""], labels=False, sticky=True)
 ).add_to(m)
 
-# --------------------------
-# Clic sur département
+# --------- FOLIUM DISPLAY ---------
 output = st_folium(m, width="100%", height=600)
-clicked_dep = None
 if output and "last_active_drawing" in output and output["last_active_drawing"]:
     props = output["last_active_drawing"]["properties"]
     st.session_state.clicked_dep = props.get("code")
-    st.session_state.clicked_name = props.get("nom")
+    st.session_state.clicked_name = props.get("nom") 
     st.switch_page("pages/6_departement.py")

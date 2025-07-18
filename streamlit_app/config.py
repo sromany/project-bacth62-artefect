@@ -1,6 +1,7 @@
 import toml
 import os
 
+# Config Streamlit
 def load_config():
     config_path = os.path.join("config", "app_config.toml")
     return toml.load(config_path)

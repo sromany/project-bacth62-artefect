@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+# 1. Dossier de travail dans le container
+WORKDIR /app
+
+# 2. Copier le code Streamlit seulement
+COPY ./streamlit_app ./streamlit_app
+
+# 3. Copier les requirements à la racine
+COPY requirements.in .
+RUN pip install --no-cache-dir -r requirements.in
+
+# 4. Copier le dossier config (pour accès à la clé GCP depuis le container)
+COPY ./config ./config
+
+# 5. Port Streamlit
+EXPOSE 8501
+
+# 6. Commande de lancement
+CMD ["streamlit", "run", "streamlit_app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]

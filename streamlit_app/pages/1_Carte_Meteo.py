@@ -12,18 +12,20 @@ ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if ROOT_PATH not in sys.path:
     sys.path.insert(0, ROOT_PATH)
 
-from streamlit_app.config import PROJECT_ID, DATASET, TABLE_TEMPERATURE, TABLE_CONSO
+from streamlit_app.config import PROJECT_ID, DATASET, TABLE_TEMPERATURE
 
 st.set_page_config(page_title="Carte météo interactive", layout="wide")
 
 # --- CONFIGURATION ---
 TABLE_ID = f"{PROJECT_ID}.{DATASET}.{TABLE_TEMPERATURE}"
-GEOJSON_PATH = "streamlit_app/assets/departements.geojson"
-
-@st.cache_data
+HERE = os.path.dirname(os.path.abspath(__file__))
+GEOJSON_PATH = os.path.join("/opt/streamlit_app", "assets", "departements.geojson")
+@st.cache_data(ttl=3600)
 def load_geojson():
     with open(GEOJSON_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
 
 def get_departement_mapping(geojson):
     return {

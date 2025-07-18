@@ -9,3 +9,7 @@ plotly
 toml
 twine
 build
+db-dtypes
+folium
+streamlit_folium
+statsmodels

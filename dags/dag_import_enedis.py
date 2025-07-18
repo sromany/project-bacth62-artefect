@@ -58,13 +58,37 @@ with DAG(
     @task(task_id="upload_csv_vers_gcs")
     def upload_to_gcs():
         from google.cloud import storage
+        from google.api_core.exceptions import Conflict, NotFound, Forbidden
 
         parsed = urlparse(cloud_storage_path)
         bucket_name = parsed.netloc
         blob_name = parsed.path.lstrip("/")
 
         client = storage.Client()
-        bucket = client.bucket(bucket_name)
+        bucket = None
+
+        # Tenter de récupérer le bucket, sinon le créer
+        try:
+            bucket = client.get_bucket(bucket_name)
+            print(f"✅ Bucket déjà existant : {bucket_name}")
+        except NotFound:
+            try:
+                bucket = client.create_bucket(bucket_name)
+                print(f"✅ Bucket créé : {bucket_name}")
+            except Conflict:
+                print(f"⚠️ Bucket {bucket_name} existe déjà (conflit de nom global)")
+                bucket = client.get_bucket(bucket_name)
+            except Forbidden:
+                print(f"❌ Pas le droit de créer le bucket : {bucket_name}")
+                raise
+            except Exception as e:
+                print(f"❌ Erreur lors de la création du bucket : {e}")
+                raise
+
+        # On s’assure que bucket est bien défini
+        if bucket is None:
+            raise RuntimeError("Bucket non accessible ou non créé.")
+
         blob = bucket.blob(blob_name)
 
         try:

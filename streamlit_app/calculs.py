@@ -78,3 +78,4 @@ def consommation_annuelle_par_departement(annee_cumule, df_models, df_meteo_inde
         })
 
     return pd.DataFrame(result)
+
