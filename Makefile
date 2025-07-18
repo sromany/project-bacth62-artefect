@@ -27,6 +27,14 @@ restart:
 	sudo docker compose down
 	sudo docker compose up -d --build --force-recreate
 
+# Redémarrage rapide Streamlit
+restart-streamlit:
+	sudo docker compose restart streamlit
+
+# Redémarrage Streamlit avec rebuild
+rebuild-streamlit:
+	sudo docker compose up -d --build streamlit
+
 # Affiche les logs Airflow en live
 logs:
 	sudo docker compose logs -f

@@ -7,6 +7,13 @@ from calculs import (
     estimer_conso_complete_mensuelle
 )
 
+from streamlit_app.config import (
+    PROJECT_ID, DATASET , TABLE_CONSO, TABLE_REG, TABLE_TEMPERATURE
+)
+
+def table_ref(table):
+    return f"{PROJECT_ID}.{DATASET}.{table}"
+
 # Initialisation
 client = bigquery.Client()
 
@@ -42,24 +49,18 @@ def load_table(query):
 
 code_int = int(departement_code)
 
-df_departement = load_table(f"""
-    SELECT *
-    FROM graphic-bonus-461713-m5.sql62_local.conso_elec_departement
-    WHERE code_departement = {code_int}
-""")
+# Ici : filtrage direct en SQL comme dans ta version qui marchait bien
+df_departement = load_table(
+    f"SELECT * FROM `{table_ref(TABLE_CONSO)}` WHERE code_departement = {code_int}"
+)
 
-df_models = load_table("""
-    SELECT *
-    FROM graphic-bonus-461713-m5.sql62_local.conso_elec_regression_models
-""")
+df_models = load_table(f"SELECT * FROM `{table_ref(TABLE_REG)}`")
 df_models['code_departement'] = df_models['code_departement'].astype(str).str.zfill(2)
 
 departement_code = str(departement_code).zfill(2)
 
-df_meteo = prepare_meteo(load_table("""
-    SELECT *
-    FROM spartan-metric-461712-i9.open_meteo_dataset.meteo
-"""))
+df_meteo = prepare_meteo(load_table(f"SELECT * FROM `{table_ref(TABLE_TEMPERATURE)}`"))
+
 
 # --------------------------
 # Widgets
