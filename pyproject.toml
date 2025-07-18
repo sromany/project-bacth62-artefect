@@ -1,6 +1,6 @@
 [project]
-name = "project-bacth62-artefect"
-version = "0.1.0"
+name = "project-batch62-artefact"
+version = "0.1.2"
 description = ""
 authors = [
     {name = "Stephane Romany",email = "stephrm972@gmail.com"}
@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "project_bacth62_artefect", from = "src"}]
+packages = [{include = "project_batch62_artefact", from = "src"}]
 
 
 [build-system]
