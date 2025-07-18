@@ -43,6 +43,10 @@ logs:
 stop:
 	sudo docker compose down
 
+# Relance la reserialization des DAGs dans le conteneur Airflow (scheduler)
+reserialize-dags:
+	sudo docker compose exec airflow-scheduler airflow dags reserialize
+	
 # Fixe les permissions dans les conteneurs (utile si erreur Permission denied)
 fix-perms:
 	sudo chown -R 50000:0 logs config dags streamlit_app
